@@ -1,0 +1,1885 @@
+{
+  "name": "Gastos Personales",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "authentication": "serviceAccount",
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "TU_FOLDER_ID_UNPROCESSED",
+          "mode": "list",
+          "cachedResultName": "Unprocessed",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/TU_FOLDER_ID_UNPROCESSED"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        720
+      ],
+      "id": "cea104f4-a451-4ac4-9b26-b5bf91efe6dc",
+      "name": "Vigilar Carpeta Drive",
+      "credentials": {
+        "googleApi": {
+          "id": "TU_GOOGLE_CREDENTIAL_ID",
+          "name": "Tu-Service-Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -224,
+        720
+      ],
+      "id": "26209164-9989-49ca-b989-5ec63e12a24b",
+      "name": "Descargar Archivo",
+      "credentials": {
+        "googleApi": {
+          "id": "TU_GOOGLE_CREDENTIAL_ID",
+          "name": "Tu-Service-Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "93d3180d-f7d9-4f05-8850-ada9683780f5",
+                    "leftValue": "={{ $('Descargar Archivo').item.json.fileExtension }}",
+                    "rightValue": "pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PDF"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "img-cond-01",
+                    "leftValue": "={{ $('Descargar Archivo').item.json.fileExtension }}",
+                    "rightValue": "png|jpg|jpeg|webp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        224,
+        720
+      ],
+      "id": "d4fb79a7-c8dd-476c-b448-113584411d5a",
+      "name": "Clasificar Tipo Archivo"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        0,
+        720
+      ],
+      "id": "55cbc632-0134-4f6e-a19e-8607872e1e66",
+      "name": "Extraer Base64 del Archivo"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.extracted_text_pdf }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"establecimiento\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"fecha\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"description\": \"Busca referencias temporales (ayer, hoy, 20 de enero). Formato: DD/MM/YYYY. Si no hay, devuelve una cadena vacía (\\\"\\\").\"\n    },\n    \"hora\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ],\n      \"description\": \"Extrae la hora si se menciona (ej: 3pm, 14:00). Formato: HH:mm. Si no hay, devuelve una cadena vacía (\\\"\\\").\"\n    },\n    \"total\": {\n      \"type\": [\n        \"number\",\n        \"null\"\n      ]\n    },\n    \"categoria\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    },\n    \"metodo_pago\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    }\n  },\n  \"required\": [\n    \"total\",\n    \"fecha\",\n    \"establecimiento\"\n  ]\n}",
+        "options": {
+          "systemPromptTemplate": "You are an expert extraction algorithm.\nOnly extract relevant information from the text.\nIf you do not know the value of an attribute asked to extract, you may omit the attribute's value."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        1248,
+        720
+      ],
+      "id": "f96d66eb-2f04-40f0-b44e-8c320c41ee4d",
+      "name": "Extraer Datos Factura (IA)"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        944
+      ],
+      "id": "6b9fc907-da4e-4206-8a7a-1bfca05dc4ee",
+      "name": "GPT-4o Facturas",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "TU_AZURE_OPENAI_CREDENTIAL_ID",
+          "name": "Tu Azure OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "TU_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "2026 Personal Expenses 2.0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/TU_SPREADSHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/TU_SPREADSHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fecha": "={{ $json.fecha }}",
+            "hora": "={{ $json.hora }}",
+            "establecimiento": "={{ $json.establecimiento }}",
+            "categoria": "={{ $json.categoria }}",
+            "total": "={{ $json.total }}",
+            "metodo_pago": "={{ $json.metodo_pago }}",
+            "fecha_procesado": "={{ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm:ss') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hora",
+              "displayName": "hora",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "establecimiento",
+              "displayName": "establecimiento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "categoria",
+              "displayName": "categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total",
+              "displayName": "total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "metodo_pago",
+              "displayName": "metodo_pago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha_procesado",
+              "displayName": "fecha_procesado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2272,
+        1264
+      ],
+      "id": "c61b8f4c-d793-4109-9c49-57e4a1403648",
+      "name": "Guardar en Google Sheets",
+      "credentials": {
+        "googleApi": {
+          "id": "TU_GOOGLE_CREDENTIAL_ID",
+          "name": "Tu-Service-Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Descargar Archivo').item.json.id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "TU_FOLDER_ID_PROCESSED",
+          "mode": "list",
+          "cachedResultName": "Processed",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/TU_FOLDER_ID_PROCESSED"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2720,
+        1168
+      ],
+      "id": "bfcddb49-92f9-4dfa-817f-e16ed251cd50",
+      "name": "Mover a Carpeta Procesados",
+      "credentials": {
+        "googleApi": {
+          "id": "TU_GOOGLE_CREDENTIAL_ID",
+          "name": "Tu-Service-Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "newUpdatedFileName": "={{ $('Extraer Datos Factura (IA)').item.json.output.establecimiento }}-{{ $('Extraer Datos Factura (IA)').item.json.output.fecha }}-{{ $('Extraer Datos Factura (IA)').item.json.output.hora }}.{{ $('Vigilar Carpeta Drive').item.json.fileExtension }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2944,
+        1168
+      ],
+      "id": "6ede831f-e0da-4dfe-bfcd-54aa419e7a6f",
+      "name": "Renombrar Archivo Procesado",
+      "credentials": {
+        "googleApi": {
+          "id": "TU_GOOGLE_CREDENTIAL_ID",
+          "name": "Tu-Service-Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vision.googleapis.com/v1/files:annotate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"requests\": [\n    {\n      \"inputConfig\": {\n        \"content\": \"{{ $json.data }}\",\n        \"mimeType\": \"application/pdf\"\n      },\n      \"features\": [\n        {\n          \"type\": \"DOCUMENT_TEXT_DETECTION\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        512,
+        816
+      ],
+      "id": "fdc2836b-54d1-47f1-858b-9e946008ffe9",
+      "name": "OCR Google Vision - PDF",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TU_HEADER_AUTH_CREDENTIAL_ID",
+          "name": "Tu Header Auth (API Key Vision)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate OCR text from all pages\nlet aggregatedText = '';\nlet pageTexts = [];\n\nfor (const item of $input.all()) {\n  try {\n    const responses = item.json.responses[0].responses;\n\n    for (const page of responses) {\n      const pageNumber = (page.context && page.context.pageNumber) || pageTexts.length + 1;\n\n      const pageText = page.fullTextAnnotation.text;\n\n      pageTexts.push({\n        pageNumber: pageNumber,\n        text: pageText\n      });\n\n      aggregatedText += page.fullTextAnnotation.text + '\\n\\n';\n    }\n  } catch (error) {\n    return [{\n      json: {\n        error: error.message,\n        aggregatedText: '',\n        debug: JSON.stringify(item.json, null, 2)\n      }\n    }];\n  }\n}\n\nreturn [{\n  json: {\n    aggregatedText: aggregatedText.trim(),\n    totalPages: pageTexts.length,\n    pages: pageTexts\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        816
+      ],
+      "id": "776e4c2c-cbce-4dc7-b54a-6b92939f9f4a",
+      "name": "Agregar Texto OCR"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f18c6c4d-46f6-4992-aa0e-34dac12b9acc",
+              "name": "extracted_text_pdf",
+              "value": "={{ $json.aggregatedText }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        720
+      ],
+      "id": "613958fc-903f-4886-ad65-cd2a9b0bdeff",
+      "name": "Mapear Campos Factura"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o = $input.first().json.output ?? $input.first().json;\n\nconst name = `${o.establecimiento ?? ''} ${o.tienda ?? ''} ${o.retailer ?? ''}`.toUpperCase();\n\nlet categoria = o.categoria;\n\nif (name.includes('ALKOSTO')) categoria = 'MERCADO';\n// aquí puedes sumar más reglas:\n// if (name.includes('EXITO')) categoria = 'MERCADO';\n// if (name.includes('RAPPI')) categoria = 'DOMICILIOS';\n\nreturn [{\n  json: {\n    ...o,\n    categoria\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        720
+      ],
+      "id": "0396db13-0ca8-4651-b106-1dfca46c7228",
+      "name": "Preparar Datos Factura"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "(from:alertas@tu_banco.com OR from:notificaciones@tu_app_delivery.com OR from:tu_email_personal@gmail.com) AND (subject:pedido OR subject:Alertas)"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        1248
+      ],
+      "id": "04d0e156-ac98-4166-8245-90dd23a53845",
+      "name": "Recibir Email Bancario",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TU_GMAIL_OAUTH_CREDENTIAL_ID",
+          "name": "Tu OAuth Google"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.snippet }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"tipo\": {\n      \"type\": \"string\",\n      \"description\": \"Si se trata de adquirir bienes o servicios, devuelve ‘COMPRA’. Si el mensaje habla de recibir dinero, devuelve ‘TRANSFERENCIA RECIBIDA’. Si el mensaje indica ''Retiraste' o 'Retiro de cajero' o 'Retiro' devuelve 'RETIRO'. Si el mensaje indicia 'transferiste' devuelve 'COMPRA'. Si el mensaje indica 'Pagaste' devuelve ‘COMPRA’. Si el mensaje indica 'codigo QR' devuelve 'QR'. No incluyas otro tipo de términos. Si el mensaje no indica ni compra ni transferencia devuelve 'INFORMATIVO'\"\n    },\n    \"monto\": {\n      \"type\": \"string\",\n      \"description\": \"El valor numérico de la transacción. Elimina símbolos de moneda (COP, $, USD). USA PUNTO como separador decimal (no coma). Ejemplo: 'USD13,99' → '13.99'. '$56.000' → '56000'. '$1.234.567' → '1234567'. NO hagas conversiones de moneda. Solo el número con punto decimal si aplica.\"\n    },\n    \"destinatario\": {\n      \"type\": \"string\",\n      \"description\": \"Si es tu banco:el nombre del comercio o persona. Si es Rappi: extrae el nombre del restaurante o tienda, NO pongas 'Rappi' como destinatario, busca el local.\"\n    },\n    \"fecha\": {\n      \"type\": \"string\",\n      \"description\": \"Fecha de la transacción en formato DD/MM/YYYY.\"\n    },\n    \"hora\": {\n      \"type\": \"string\",\n      \"description\": \"HH:mm\"\n    },\n    \"categoria\": {\n      \"type\": \"string\",\n      \"description\": \"Reglas estrictas: 1) Si es Rappi -> 'Domicilios'. 2) Si 'destinatario' es supermercado -> 'Hogar'. 3) Si es 'NOMBRE_PERSONA' -> 'TU_CATEGORIA'. 4) Si el tipo es 'RETIRO' agrega -> 'Retiro efectivo' 5) Si es 'SERVICENTRO' -> 'Gasolina' 6) Si es 'Amazon' -> 'Compras en línea' 7) Si es 'Alcanos' -> 'Servicios Públicos' 8) Otros -> inferir (O sea, que investigues y analises el mensaje e intuyas cuál es la categoría.) NUNCA pongas la palabra 'inferir' busca el establecimiento e infiere en el caso de que no sepas que es ponle 'CATEGORIA DESCONOCIDA'.\"\n    },\n    \"moneda\": {\n      \"type\": \"string\",\n      \"description\": \"La moneda de la transacción. Si el mensaje menciona 'USD', 'dólares', 'dollars' o 'US$' devuelve 'USD'. Si menciona 'COP', 'pesos' o no especifica moneda, devuelve 'COP'.\"\n    }\n  },\n  \"required\": [\n    \"monto\",\n    \"destinatario\",\n    \"fecha\",\n    \"categoria\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        1248
+      ],
+      "id": "d512690b-8c1c-4ba0-b9fd-50d99fd77028",
+      "name": "Extraer Datos Email (IA)"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        528,
+        1472
+      ],
+      "id": "717ee372-35f1-479f-b23f-b9dbb86b109f",
+      "name": "GPT-4o Emails",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "TU_AZURE_OPENAI_CREDENTIAL_ID",
+          "name": "Tu Azure OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "95fa847f-8f54-4d89-9ad6-e2b90723a66d",
+              "name": "fecha",
+              "value": "={{ $json.output.fecha }}",
+              "type": "string"
+            },
+            {
+              "id": "0422c2fd-7d50-4184-a958-2a2b587d3324",
+              "name": "hora",
+              "value": "={{ $json.output.hora ? $json.output.hora : $now.setZone('America/Bogota').toFormat('HH:mm') }}",
+              "type": "string"
+            },
+            {
+              "id": "0e0db091-fa43-4b19-b2a2-ef1c23dd343e",
+              "name": "establecimiento",
+              "value": "={{ $json.output.destinatario }}",
+              "type": "string"
+            },
+            {
+              "id": "89b68515-61b6-4318-85b6-dacf82a1bd56",
+              "name": "categoria",
+              "value": "={{ $json.output.categoria }}",
+              "type": "string"
+            },
+            {
+              "id": "e6a5b660-9588-491a-bda8-67d54035739a",
+              "name": "total",
+              "value": "={{ $json.output.monto }}",
+              "type": "string"
+            },
+            {
+              "id": "f35e0e05-187b-42d6-a8e6-e0819e6c9ff1",
+              "name": "metodo_pago",
+              "value": "TARJETA DEBITO/CREDITO",
+              "type": "string"
+            },
+            {
+              "id": "beccd1c8-7549-44ea-9c8a-198644bd9861",
+              "name": "fecha_procesado",
+              "value": "={{ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        1072
+      ],
+      "id": "a9174eae-6c39-4be9-bf43-78c8a39b53f5",
+      "name": "Mapear Campos Email"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "userIds": "TU_TELEGRAM_CHAT_ID"
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        1808
+      ],
+      "id": "0b7d1a27-fccf-4d83-9589-0b69af2d7ffa",
+      "name": "Recibir Gasto por Telegram",
+      "webhookId": "00000000-0000-0000-0000-000000000001",
+      "credentials": {
+        "telegramApi": {
+          "id": "TU_TELEGRAM_CREDENTIAL_ID",
+          "name": "Tu Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.message.text }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"monto\": {\n      \"type\": \"string\",\n      \"description\": \"El valor numérico de la transacción. Elimina símbolos de moneda. USA PUNTO como separador decimal (no coma). Si dice '15k' o '15 mil', conviértelo a número (15000). Ejemplo: 'USD13,99' → '13.99'. '56mil' → '56000'. Solo devuelve el número.\"\n    },\n    \"destinatario\": {\n      \"type\": \"string\",\n      \"description\": \"Si es tu banco:nombre del comercio. Si es Rappi: nombre del restaurante (no pongas 'Rappi'). Si no es explícito, infiérelo.\"\n    },\n    \"categoria\": {\n      \"type\": \"string\",\n      \"description\": \"Reglas estrictas: 1) Si es Rappi -> 'Domicilios'. 2) Si 'destinatario' es supermercado -> 'Hogar'. 3) Si es 'NOMBRE_PERSONA' -> 'TU_CATEGORIA'. 4) Si el tipo es 'RETIRO' agrega -> 'Retiro efectivo' 5) Si es 'SERVICENTRO' -> 'Gasolina' 6) Otros -> inferir (O sea, que investigues y analises el mensaje e intuyas cuál es la categoría.) NUNCA pongas la palabra 'inferir' busca el establecimiento e infiere en el caso de que no sepas que es ponle 'CATEGORIA DESCONOCIDA'.\"\n    },\n    \"medio_pago\": {\n      \"type\": \"string\",\n      \"description\": \"Si menciona 'tarjeta', 'tc', 'débito', 'crédito' o 'banco', pon 'Tarjeta'. Si NO menciona nada, asume 'EFECTIVO'.\"\n    },\n    \"moneda\": {\n      \"type\": \"string\",\n      \"description\": \"La moneda. Si menciona 'USD', 'dólares', 'dollars' o 'US$' devuelve 'USD'. Si menciona 'COP', 'pesos' o no especifica, devuelve 'COP'.\"\n    }\n  },\n  \"required\": [\n    \"monto\",\n    \"destinatario\",\n    \"categoria\",\n    \"medio_pago\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        1248,
+        1808
+      ],
+      "id": "89365df1-af8a-4aca-848d-45c31435824c",
+      "name": "Extraer Datos Telegram (IA)"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        2032
+      ],
+      "id": "7f7878c6-eb0f-46f2-af83-35628ee48705",
+      "name": "GPT-4o Telegram",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "TU_AZURE_OPENAI_CREDENTIAL_ID",
+          "name": "Tu Azure OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "95fa847f-8f54-4d89-9ad6-e2b90723a66d",
+              "name": "fecha",
+              "value": "={{ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            },
+            {
+              "id": "0422c2fd-7d50-4184-a958-2a2b587d3324",
+              "name": "hora",
+              "value": "={{ $now.setZone('America/Bogota').toFormat('HH:mm') }}",
+              "type": "string"
+            },
+            {
+              "id": "0e0db091-fa43-4b19-b2a2-ef1c23dd343e",
+              "name": "establecimiento",
+              "value": "={{ $json.output.destinatario }}",
+              "type": "string"
+            },
+            {
+              "id": "89b68515-61b6-4318-85b6-dacf82a1bd56",
+              "name": "categoria",
+              "value": "={{ $json.output.categoria }}",
+              "type": "string"
+            },
+            {
+              "id": "e6a5b660-9588-491a-bda8-67d54035739a",
+              "name": "total",
+              "value": "={{ $json.output.monto }}",
+              "type": "string"
+            },
+            {
+              "id": "f35e0e05-187b-42d6-a8e6-e0819e6c9ff1",
+              "name": "metodo_pago",
+              "value": "={{ $json.output.medio_pago }}",
+              "type": "string"
+            },
+            {
+              "id": "beccd1c8-7549-44ea-9c8a-198644bd9861",
+              "name": "fecha_procesado",
+              "value": "={{ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        1808
+      ],
+      "id": "3082f971-3777-449d-86e8-be48b4f935c7",
+      "name": "Mapear Campos Telegram"
+    },
+    {
+      "parameters": {
+        "chatId": "TU_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2944,
+        1360
+      ],
+      "id": "78fdb31a-0001-4a0d-a4b8-068e5bb383cb",
+      "name": "Enviar Alerta Telegram",
+      "webhookId": "00000000-0000-0000-0000-000000000002",
+      "credentials": {
+        "telegramApi": {
+          "id": "TU_TELEGRAM_CREDENTIAL_ID",
+          "name": "Tu Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "TU_TELEGRAM_CHAT_ID",
+        "text": "=💰 *Transferencia recibida*\nValor: ${{ Number($('Extraer Datos Email (IA)').item.json.output.monto.replace(/[^\\d.]/g, '')).toLocaleString('es-CO') }} {{ $('Extraer Datos Email (IA)').item.json.output.moneda || 'COP' }}\nDe: {{ $('Extraer Datos Email (IA)').item.json.output.destinatario }}\nFecha: {{ $('Extraer Datos Email (IA)').item.json.output.fecha }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        1216
+      ],
+      "id": "86d861f8-ca92-4822-ba66-3ed88a88c45d",
+      "name": "Notificar Transferencia Recibida",
+      "webhookId": "00000000-0000-0000-0000-000000000003",
+      "credentials": {
+        "telegramApi": {
+          "id": "TU_TELEGRAM_CREDENTIAL_ID",
+          "name": "Tu Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.tipo }}",
+                    "rightValue": "COMPRA",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "dedd1ac8-8b28-435f-bfc0-c4ffcdb30ac0"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "55c2c78d-bede-4a45-90e4-13f94296e58c",
+                    "leftValue": "={{ $json.output.tipo }}",
+                    "rightValue": "RETIRO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "cc877eb1-c209-44d8-84e5-bb2894e77751",
+                    "leftValue": "={{ $json.output.tipo }}",
+                    "rightValue": "TRANSFERENCIA RECIBIDA",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9303eb9a-36b5-467b-a402-74fd98498290",
+                    "leftValue": "={{ $json.output.tipo }}",
+                    "rightValue": "QR",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "55c4d180-a6f3-4d84-a49c-d8ef414b51d3",
+                    "leftValue": "={{ $json.output.tipo }}",
+                    "rightValue": "INFORMATIVO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        800,
+        1120
+      ],
+      "id": "874459ab-ce31-41c9-9a5d-88dcdbd6d463",
+      "name": "Clasificar Tipo Transaccion"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "TU_TELEGRAM_CHAT_ID",
+        "message": "=Detecté una transacción por QR: ${{ Number($('Extraer Datos Email (IA)').item.json.output.monto).toLocaleString('es-CO') }}. ¿Dónde fue y en qué categoría la registro?",
+        "responseType": "freeText",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        1408
+      ],
+      "id": "bdcc8b9d-70f1-458a-8bf0-dd1e24973886",
+      "name": "Pedir Contexto QR al Usuario",
+      "webhookId": "00000000-0000-0000-0000-000000000004",
+      "credentials": {
+        "telegramApi": {
+          "id": "TU_TELEGRAM_CREDENTIAL_ID",
+          "name": "Tu Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "85893ee5-75a0-4078-9357-1b801a1ffb00",
+              "name": "categoria",
+              "value": "={{ $json.output.categoria }}",
+              "type": "string"
+            },
+            {
+              "id": "a4101ccc-a58d-4474-9ba6-5745ea64e447",
+              "name": "establecimiento",
+              "value": "={{ $json.output.establecimiento }}",
+              "type": "string"
+            },
+            {
+              "id": "92b6b4cc-faa0-4819-bcd5-4776baa6b460",
+              "name": "fecha",
+              "value": "={{ $('Clasificar Tipo Transaccion').item.json.output.fecha }}",
+              "type": "string"
+            },
+            {
+              "id": "cd6fd3c7-f1ee-49e5-8491-0a026bde1e0d",
+              "name": "hora",
+              "value": "={{ $('Clasificar Tipo Transaccion').item.json.output.hora }}",
+              "type": "string"
+            },
+            {
+              "id": "d61dd8aa-f762-42f1-bc08-6771359bd146",
+              "name": "total",
+              "value": "={{ $('Clasificar Tipo Transaccion').item.json.output.monto }}",
+              "type": "string"
+            },
+            {
+              "id": "d8dc2d70-5769-4421-891b-fd8b253f19eb",
+              "name": "metodo_pago",
+              "value": "TRANSFERENCIA-QR",
+              "type": "string"
+            },
+            {
+              "id": "ef3-fecha_procesado",
+              "name": "fecha_procesado",
+              "value": "={{ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        1408
+      ],
+      "id": "667324ff-39e4-4695-a289-b20d8babe07d",
+      "name": "Mapear Campos QR"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        1760
+      ],
+      "id": "a81b5efe-80ec-419a-8cb1-dc3ed3d04cc3",
+      "name": "Capturar Error del Workflow"
+    },
+    {
+      "parameters": {
+        "chatId": "TU_TELEGRAM_CHAT_ID",
+        "text": "=⚠️ *Error en Gastos Personales*\n\nWorkflow: {{ $json.workflow.name }}\nNodo: {{ $json.execution.lastNodeExecuted }}\nError: {{ $json.execution.error.message }}\n\n[Ver ejecución]({{ $json.execution.url }})",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        128,
+        1760
+      ],
+      "id": "f76fd2c8-be00-4c50-9504-eac84341a164",
+      "name": "Notificar Error por Telegram",
+      "webhookId": "00000000-0000-0000-0000-000000000005",
+      "credentials": {
+        "telegramApi": {
+          "id": "TU_TELEGRAM_CREDENTIAL_ID",
+          "name": "Tu Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vision.googleapis.com/v1/images:annotate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"requests\": [\n    {\n      \"image\": {\n        \"content\": \"{{ $json.data }}\"\n      },\n      \"features\": [\n        {\n          \"type\": \"DOCUMENT_TEXT_DETECTION\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        512,
+        624
+      ],
+      "id": "cb2b3c1f-2f08-4b8d-82a0-af71e46f44bf",
+      "name": "OCR Google Vision - Imagen",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TU_HEADER_AUTH_CREDENTIAL_ID",
+          "name": "Tu Header Auth (API Key Vision)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\ntry {\n  const resp = item.json.responses[0];\n  const text = resp.fullTextAnnotation ? resp.fullTextAnnotation.text : '';\n  return [{ json: { aggregatedText: text, totalPages: 1 } }];\n} catch (error) {\n  return [{ json: { error: error.message, aggregatedText: '' } }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        624
+      ],
+      "id": "81cecf61-5f19-4ef1-83a7-37d9fbaf01db",
+      "name": "Extraer Texto de Imagen"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Normalizar fecha a DD/MM/YYYY\nfunction normalizeFecha(raw) {\n  if (!raw) return '';\n  const s = String(raw).trim();\n  let d, m, y;\n  // YYYY-MM-DD\n  let match = s.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})/);\n  if (match) { [, y, m, d] = match; }\n  // DD/MM/YYYY o DD-MM-YYYY\n  if (!match) { match = s.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})/); }\n  if (match && !y) {\n    // Ambiguo: asumimos D/M/Y si primer num <= 31 y segundo <= 12\n    const a = parseInt(match[1]), b = parseInt(match[2]);\n    if (a > 12) { d = match[1]; m = match[2]; y = match[3]; }\n    else if (b > 12) { m = match[1]; d = match[2]; y = match[3]; }\n    else { d = match[1]; m = match[2]; y = match[3]; } // default D/M/Y\n  }\n  // M/D/YYYY (US format from LLM)\n  if (!y) return s;\n  return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');\n}\n\nconst fields = $('Mapear Campos Email').item.json;\nconst tasa = $('Obtener Tasa USD (Email)').item.json.rates?.COP || 4200;\nconst moneda = ($('Extraer Datos Email (IA)').item.json.output.moneda || 'COP').toUpperCase();\n\n// Parsear monto manejando formatos colombianos y estadounidenses\nfunction parseMonto(value) {\n  let raw = String(value).trim();\n  // Strip currency symbols/prefixes first\n  raw = raw.replace(/^(?:USD|COP|US\\$|\\$)\\s*/i, '').trim();\n  // Caso 1: coma decimal al final (13,99 o 1.234,50)\n  if (/,\\d{1,2}$/.test(raw)) {\n    raw = raw.replace(/\\./g, '').replace(',', '.');\n  }\n  // Caso 2: punto como separador de miles (56.000, 1.234.567)\n  // Detectar: punto seguido de exactamente 3 dígitos (repetido)\n  else if (/^[\\d.]+(\\d{3})$/.test(raw) && /\\.\\d{3}/.test(raw)) {\n    raw = raw.replace(/\\./g, '');\n  }\n  // Caso 3: comas como miles (1,000,000)\n  else {\n    raw = raw.replace(/,/g, '');\n  }\n  return parseFloat(raw.replace(/[^\\d.]/g, '')) || 0;\n}\n\nlet total = parseMonto(fields.total);\n\nif (moneda === 'USD') {\n  total = Math.round(total * tasa);\n}\n\nconst totalFormatted = '$' + total.toLocaleString('es-CO');\n\nreturn [{\n  json: {\n    ...fields,\n    fecha: normalizeFecha(fields.fecha),\n    total,\n    total_formatted: totalFormatted,\n    moneda_original: moneda,\n    tasa_usd_cop: moneda === 'USD' ? tasa : null,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        1072
+      ],
+      "id": "4e7a58d1-ceaf-4e8a-aed3-da6789399f67",
+      "name": "Convertir USD a COP (Email)"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Normalizar fecha a DD/MM/YYYY\nfunction normalizeFecha(raw) {\n  if (!raw) return '';\n  const s = String(raw).trim();\n  let d, m, y;\n  // YYYY-MM-DD\n  let match = s.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})/);\n  if (match) { [, y, m, d] = match; }\n  // DD/MM/YYYY o DD-MM-YYYY\n  if (!match) { match = s.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})/); }\n  if (match && !y) {\n    // Ambiguo: asumimos D/M/Y si primer num <= 31 y segundo <= 12\n    const a = parseInt(match[1]), b = parseInt(match[2]);\n    if (a > 12) { d = match[1]; m = match[2]; y = match[3]; }\n    else if (b > 12) { m = match[1]; d = match[2]; y = match[3]; }\n    else { d = match[1]; m = match[2]; y = match[3]; } // default D/M/Y\n  }\n  // M/D/YYYY (US format from LLM)\n  if (!y) return s;\n  return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');\n}\n\nconst fields = $('Mapear Campos Telegram').item.json;\nconst tasa = $('Obtener Tasa USD (Telegram)').item.json.rates?.COP || 4200;\nconst moneda = ($('Extraer Datos Telegram (IA)').item.json.output.moneda || 'COP').toUpperCase();\n\n// Parsear monto manejando formatos colombianos y estadounidenses\nfunction parseMonto(value) {\n  let raw = String(value).trim();\n  // Strip currency symbols/prefixes first\n  raw = raw.replace(/^(?:USD|COP|US\\$|\\$)\\s*/i, '').trim();\n  // Caso 1: coma decimal al final (13,99 o 1.234,50)\n  if (/,\\d{1,2}$/.test(raw)) {\n    raw = raw.replace(/\\./g, '').replace(',', '.');\n  }\n  // Caso 2: punto como separador de miles (56.000, 1.234.567)\n  // Detectar: punto seguido de exactamente 3 dígitos (repetido)\n  else if (/^[\\d.]+(\\d{3})$/.test(raw) && /\\.\\d{3}/.test(raw)) {\n    raw = raw.replace(/\\./g, '');\n  }\n  // Caso 3: comas como miles (1,000,000)\n  else {\n    raw = raw.replace(/,/g, '');\n  }\n  return parseFloat(raw.replace(/[^\\d.]/g, '')) || 0;\n}\n\nlet total = parseMonto(fields.total);\n\nif (moneda === 'USD') {\n  total = Math.round(total * tasa);\n}\n\nconst totalFormatted = '$' + total.toLocaleString('es-CO');\n\nreturn [{\n  json: {\n    ...fields,\n    fecha: normalizeFecha(fields.fecha),\n    total,\n    total_formatted: totalFormatted,\n    moneda_original: moneda,\n    tasa_usd_cop: moneda === 'USD' ? tasa : null,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        1808
+      ],
+      "id": "bfd839d8-3b3b-4111-b8b6-e4c0b4f42a3b",
+      "name": "Convertir USD a COP (Telegram)"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Normalizar fecha a DD/MM/YYYY\nfunction normalizeFecha(raw) {\n  if (!raw) return '';\n  const s = String(raw).trim();\n  let d, m, y;\n  // YYYY-MM-DD\n  let match = s.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})/);\n  if (match) { [, y, m, d] = match; }\n  // DD/MM/YYYY o DD-MM-YYYY\n  if (!match) { match = s.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})/); }\n  if (match && !y) {\n    // Ambiguo: asumimos D/M/Y si primer num <= 31 y segundo <= 12\n    const a = parseInt(match[1]), b = parseInt(match[2]);\n    if (a > 12) { d = match[1]; m = match[2]; y = match[3]; }\n    else if (b > 12) { m = match[1]; d = match[2]; y = match[3]; }\n    else { d = match[1]; m = match[2]; y = match[3]; } // default D/M/Y\n  }\n  // M/D/YYYY (US format from LLM)\n  if (!y) return s;\n  return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');\n}\n\nconst fields = $('Mapear Campos QR').item.json;\nconst tasa = $('Obtener Tasa USD (QR)').item.json.rates?.COP || 4200;\nconst moneda = ($('Clasificar Tipo Transaccion').item.json.output.moneda || 'COP').toUpperCase();\n\n// Parsear monto manejando formatos colombianos y estadounidenses\nfunction parseMonto(value) {\n  let raw = String(value).trim();\n  // Strip currency symbols/prefixes first\n  raw = raw.replace(/^(?:USD|COP|US\\$|\\$)\\s*/i, '').trim();\n  // Caso 1: coma decimal al final (13,99 o 1.234,50)\n  if (/,\\d{1,2}$/.test(raw)) {\n    raw = raw.replace(/\\./g, '').replace(',', '.');\n  }\n  // Caso 2: punto como separador de miles (56.000, 1.234.567)\n  // Detectar: punto seguido de exactamente 3 dígitos (repetido)\n  else if (/^[\\d.]+(\\d{3})$/.test(raw) && /\\.\\d{3}/.test(raw)) {\n    raw = raw.replace(/\\./g, '');\n  }\n  // Caso 3: comas como miles (1,000,000)\n  else {\n    raw = raw.replace(/,/g, '');\n  }\n  return parseFloat(raw.replace(/[^\\d.]/g, '')) || 0;\n}\n\nlet total = parseMonto(fields.total);\n\nif (moneda === 'USD') {\n  total = Math.round(total * tasa);\n}\n\nconst totalFormatted = '$' + total.toLocaleString('es-CO');\n\nreturn [{\n  json: {\n    ...fields,\n    fecha: normalizeFecha(fields.fecha),\n    total,\n    total_formatted: totalFormatted,\n    moneda_original: moneda,\n    tasa_usd_cop: moneda === 'USD' ? tasa : null,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        1408
+      ],
+      "id": "b9160461-aa6c-482a-8ff8-300a999801ef",
+      "name": "Convertir USD a COP (QR)"
+    },
+    {
+      "parameters": {
+        "url": "https://open.er-api.com/v6/latest/USD",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1824,
+        1072
+      ],
+      "id": "f61894b0-81ee-4017-92d7-2cfe4d6c3d07",
+      "name": "Obtener Tasa USD (Email)"
+    },
+    {
+      "parameters": {
+        "url": "https://open.er-api.com/v6/latest/USD",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1824,
+        1808
+      ],
+      "id": "e7915774-a474-4553-a153-5e0b6f2de07d",
+      "name": "Obtener Tasa USD (Telegram)"
+    },
+    {
+      "parameters": {
+        "url": "https://open.er-api.com/v6/latest/USD",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1824,
+        1408
+      ],
+      "id": "8351c8dd-56ef-43a8-af33-a0abceb89e89",
+      "name": "Obtener Tasa USD (QR)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos del Convert node correcto (el Sheet output no tiene total_formatted)\nlet data;\ntry { data = $('Convertir USD a COP (Email)').item.json; } catch(e) {\n  try { data = $('Convertir USD a COP (Telegram)').item.json; } catch(e2) {\n    try { data = $('Convertir USD a COP (QR)').item.json; } catch(e3) {\n      try { data = $('Convertir USD a COP (Factura)').item.json; } catch(e4) {\n        data = $input.first().json;\n      }\n    }\n  }\n}\n\nconst total = data.total_formatted || ('$' + Number(data.total).toLocaleString('es-CO'));\nconst lugar = data.establecimiento || 'Desconocido';\nconst cat = (data.categoria || 'Sin categoría').toUpperCase();\nconst moneda = data.moneda_original === 'USD' ? 'USD → COP' : 'COP';\n\nconst emojis = {\n  'DOMICILIOS': '🛵', 'HOGAR': '🏠', 'MERCADO': '🛒',\n  'GASOLINA': '⛽', 'PERFUMES': '🧴', 'COMPRAS EN LÍNEA': '🛍️',\n  'SERVICIOS PÚBLICOS': '💡', 'RETIRO EFECTIVO': '🏧',\n  'TRANSPORTE': '🚗', 'SALUD': '💊', 'ENTRETENIMIENTO': '🎬',\n};\nconst emoji = emojis[cat] || '💳';\n\nconst lugarUp = lugar.toUpperCase();\nlet comentario = '';\nconst totalNum = Number(data.total) || 0;\n\nif (lugarUp.includes('RAPPI') || cat === 'DOMICILIOS') {\n  comentario = '🍔 Otra vez domicilios... las calorías no se debuggean.';\n} else if (cat === 'GASOLINA' || lugarUp.includes('SERVICENTRO')) {\n  comentario = '⛽ Kilómetros que no se refactorizan.';\n} else if (lugarUp.includes('CAFE') || lugarUp.includes('CAFÉ') || lugarUp.includes('STARBUCKS') || lugarUp.includes('JUAN VALDEZ')) {\n  comentario = '☕ Ese aroma a código y cafeína sí se siente.';\n} else if (totalNum > 200000) {\n  comentario = '📊 Gasto fuerte. Revisa tu presupuesto.';\n} else if (cat === 'COMPRAS EN LÍNEA') {\n  comentario = '📦 Otro paquete en camino, ¿no?';\n} else if (cat.includes('MERCADO') || cat.includes('HOGAR')) {\n  comentario = '🏠 Invirtiendo en el hogar, bien ahí.';\n} else {\n  comentario = '✅ Registrado sin novedad.';\n}\n\nconst msg = `${emoji} *Gasto registrado*\\n`\n  + `💰 Valor: ${total} ${moneda}\\n`\n  + `📍 Lugar: ${lugar}\\n`\n  + `🏷️ Categoría: ${data.categoria || 'Sin categoría'}\\n`\n  + `\\n${comentario}`;\n\nreturn [{ json: { text: msg } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        1360
+      ],
+      "id": "a6b4f053-f1f1-4aaa-ae99-b3da6487fe14",
+      "name": "Construir Mensaje Notificacion"
+    },
+    {
+      "parameters": {
+        "url": "https://open.er-api.com/v6/latest/USD",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1824,
+        720
+      ],
+      "id": "d9573fac-d092-4b11-ac4b-f486fcf4fbe0",
+      "name": "Obtener Tasa USD (Factura)"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Normalizar fecha a DD/MM/YYYY\nfunction normalizeFecha(raw) {\n  if (!raw) return '';\n  const s = String(raw).trim();\n  let d, m, y;\n  let match = s.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})/);\n  if (match) { [, y, m, d] = match; }\n  if (!match) { match = s.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})/); }\n  if (match && !y) {\n    const a = parseInt(match[1]), b = parseInt(match[2]);\n    if (a > 12) { d = match[1]; m = match[2]; y = match[3]; }\n    else if (b > 12) { m = match[1]; d = match[2]; y = match[3]; }\n    else { d = match[1]; m = match[2]; y = match[3]; }\n  }\n  if (!y) return s;\n  return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');\n}\n\nconst fields = $('Preparar Datos Factura').item.json;\nconst tasa = $('Obtener Tasa USD (Factura)').item.json.rates?.COP || 4200;\nconst moneda = (fields.moneda || 'COP').toUpperCase();\n\nfunction parseMonto(value) {\n  let raw = String(value).trim();\n  if (/,\\d{1,2}$/.test(raw)) {\n    raw = raw.replace(/\\./g, '').replace(',', '.');\n  } else if (/^[\\d.]+(\\d{3})$/.test(raw) && /\\.\\d{3}/.test(raw)) {\n    raw = raw.replace(/\\./g, '');\n  } else {\n    raw = raw.replace(/,/g, '');\n  }\n  return parseFloat(raw.replace(/[^\\d.]/g, '')) || 0;\n}\n\nlet total = parseMonto(fields.total);\n\nif (moneda === 'USD') {\n  total = Math.round(total * tasa);\n}\n\nconst totalFormatted = '$' + total.toLocaleString('es-CO');\n\nreturn [{\n  json: {\n    ...fields,\n    fecha: normalizeFecha(fields.fecha),\n    total,\n    total_formatted: totalFormatted,\n    moneda_original: moneda,\n    tasa_usd_cop: moneda === 'USD' ? tasa : null,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        720
+      ],
+      "id": "fca802b1-949c-4963-a49d-2c0fd7b006bd",
+      "name": "Convertir USD a COP (Factura)"
+    },
+    {
+      "parameters": {
+        "text": "={{ typeof $json.data === 'string' ? $json.data : ($json.data?.message?.text || $json.data?.text || $json.message?.text || $json.text || $json.response || '(sin respuesta)') }}",
+        "schemaType": "manual",
+        "inputSchema": "{\"type\": \"object\", \"properties\": {\"establecimiento\": {\"type\": [\"string\", \"null\"], \"description\": \"El nombre del comercio, tienda o lugar donde se realizó la compra. Si el usuario dice '{acción} en {lugar}', el establecimiento es el LUGAR (lo que viene después de 'en'). Ejemplos: 'almuerzo en Qbanitos' → 'Qbanitos'. 'cena en Tony Roma' → 'Tony Roma'. 'Superdry ropa deportiva' → 'Superdry'. Si no hay lugar específico, devuelve null.\"}, \"categoria\": {\"type\": \"string\", \"description\": \"La categoría del gasto. Reglas estrictas:\\n1) Si menciona almuerzo/desayuno/cena/comida/merienda/postre/restaurante/pizza/sushi/hamburgesa → 'Domicilios'\\n2) Si menciona supermercado/mercado/éxito/carulla/jumbo/d1 → 'Mercado'\\n3) Si menciona gasolina/tanqueo/combustible → 'Gasolina'\\n4) Si menciona ropa/zapatos/vestir/moda/deportiva → 'Ropa y accesorios'\\n5) Si menciona farmacia/droguería/medicamento/salud → 'Salud'\\n6) Si menciona café/starbucks/juan valdez/oma → 'Entretenimiento'\\n7) Si menciona domicilio/pedido/rappi/uber eats → 'Domicilios'\\n8) Si no puedes determinar la categoría con ninguna regla anterior → 'CATEGORIA DESCONOCIDA'\\nNUNCA dejes el campo vacío ni uses la palabra 'inferir'.\"}}, \"required\": [\"categoria\"]}",
+        "options": {
+          "systemPromptTemplate": "Eres un asistente que extrae información de gastos a partir de texto libre en español.\n\nREGLA CLAVE: Si el formato es '{{acción/comida}} en {{lugar}}', entonces:\n  - establecimiento = el LUGAR (lo que viene después de 'en')\n  - categoria = inferida de la ACCIÓN (lo que viene antes de 'en')\n\nEjemplos:\n  'almuerzo en qbanitos' → establecimiento='Qbanitos', categoria='Domicilios'\n  'almuerzo en El Corral' → establecimiento='El Corral', categoria='Domicilios'\n  'desayuno en La Panka' → establecimiento='La Panka', categoria='Domicilios'\n  'cena en Tony Roma' → establecimiento='Tony Roma', categoria='Domicilios'\n  'Superdry ropa deportiva' → establecimiento='Superdry', categoria='Ropa y accesorios'\n  'En tienda superdry ropa deportiva' → establecimiento='Superdry', categoria='Ropa y accesorios'\n  'Gasolina' → establecimiento=null, categoria='Gasolina'\n  'mercado en Éxito' → establecimiento='Éxito', categoria='Mercado'\n\nSiempre devuelve una categoria concreta basada en la acción o contexto."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        1248,
+        1296
+      ],
+      "id": "9901942d-1d85-4bf5-a737-791c059ab310",
+      "name": "Extraer Datos QR (IA)"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        1520
+      ],
+      "id": "8e2a07bc-6ee2-430e-8bb4-af7b084cbaf2",
+      "name": "GPT-4o QR",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "TU_AZURE_OPENAI_CREDENTIAL_ID",
+          "name": "Tu Azure OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 1. Trigger: Google Drive\nMonitorea carpeta 'Unprocessed' cada minuto.\nCuando detecta archivo nuevo (factura PDF/imagen), inicia el flujo de procesamiento OCR.",
+        "height": 200,
+        "width": 350,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        400
+      ],
+      "id": "a04d048b-071f-4f12-8846-0e338c062566",
+      "name": "Nota: Trigger Drive"
+    },
+    {
+      "parameters": {
+        "content": "## 2. Pipeline OCR\nDescarga archivo → Extrae base64 → Clasifica tipo (PDF/Imagen) → Envía a Google Cloud Vision API → Extrae texto reconocido.",
+        "height": 180,
+        "width": 500,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        416
+      ],
+      "id": "6d75cdb6-2884-45c5-9ff1-75af59eb62d3",
+      "name": "Nota: Pipeline OCR"
+    },
+    {
+      "parameters": {
+        "content": "## 3. Extraccion IA (Facturas)\nGPT-4o (Azure) analiza texto OCR y extrae: establecimiento, fecha, hora, total, categoria, metodo de pago. Schema JSON estricto.",
+        "height": 180,
+        "width": 400,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        944,
+        416
+      ],
+      "id": "1504194e-e182-45d0-86a2-0c6821155122",
+      "name": "Nota: IA Facturas"
+    },
+    {
+      "parameters": {
+        "content": "## 4. Trigger: Gmail\nRecibe emails bancarios (notificaciones de compra/transferencia). El cuerpo del email se pasa directo al extractor IA.",
+        "height": 180,
+        "width": 350,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        1232
+      ],
+      "id": "348ba962-d8b1-40f0-8543-a7c5ce346ee0",
+      "name": "Nota: Trigger Gmail"
+    },
+    {
+      "parameters": {
+        "content": "## 5. Clasificacion de Transacciones\nSwitch con 4 salidas:\n- Compra → Mapear campos\n- Retiro → Mapear campos\n- Transferencia recibida → Notificar\n- Pago QR → Pedir contexto al usuario",
+        "height": 172,
+        "width": 400,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        384,
+        1024
+      ],
+      "id": "508e6931-421f-45b4-8a0b-40b20218fe18",
+      "name": "Nota: Switch Transacciones"
+    },
+    {
+      "parameters": {
+        "content": "## 6. Trigger: Telegram\nEl usuario envia gastos manuales por chat de Telegram. IA extrae datos del mensaje de texto libre.",
+        "height": 180,
+        "width": 350,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        624,
+        1936
+      ],
+      "id": "7cb2aca3-8b38-4895-ac09-c6881c3987b2",
+      "name": "Nota: Trigger Telegram"
+    },
+    {
+      "parameters": {
+        "content": "## 7. Conversion USD → COP\nAntes de guardar, consulta tasa de cambio actual (open.er-api.com). Si el monto es en USD, lo convierte a COP. Cada flujo tiene su propia conversion.",
+        "height": 180,
+        "width": 450,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        416
+      ],
+      "id": "6ee08e7a-ca5b-40e2-8b71-aa508022ade3",
+      "name": "Nota: Conversion Moneda"
+    },
+    {
+      "parameters": {
+        "content": "## 8. Google Sheets\nTodos los flujos convergen aqui. Guarda en formato RAW: establecimiento, fecha (YYYY-MM-DD), hora, total, total_cop, categoria, metodo_pago, fuente, moneda, tasa.",
+        "height": 200,
+        "width": 450,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        976
+      ],
+      "id": "5af0c13f-5202-4efe-9600-c37cef31d06c",
+      "name": "Nota: Google Sheets"
+    },
+    {
+      "parameters": {
+        "content": "## 9. Alerta Inteligente\nSi total > umbral → Construye mensaje con emoji segun categoria y envia alerta por Telegram al usuario.",
+        "width": 380
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3072,
+        1024
+      ],
+      "id": "a48d3a7f-61fc-4d55-9a15-3bfba64bba63",
+      "name": "Nota: Alerta Telegram"
+    },
+    {
+      "parameters": {
+        "content": "## 10. Flujo QR\nCuando detecta pago QR, envia mensaje Telegram pidiendo contexto (establecimiento). Espera respuesta → IA extrae datos → Mapea → Guarda.",
+        "height": 180,
+        "width": 400,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        672,
+        1584
+      ],
+      "id": "b2abcea9-f44a-4cf9-a31b-89214791153c",
+      "name": "Nota: Flujo QR"
+    },
+    {
+      "parameters": {
+        "content": "## 11. Post-procesamiento Drive\nDespues de guardar en Sheets, evalua si hay alerta. Luego mueve archivo a carpeta 'Processed' y lo renombra con formato estandar.",
+        "height": 180,
+        "width": 400,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3104,
+        1488
+      ],
+      "id": "75e0998b-533a-4614-9066-36cb46303779",
+      "name": "Nota: Post-proceso Drive"
+    },
+    {
+      "parameters": {
+        "content": "## 12. Manejo de Errores\nError Trigger global captura cualquier fallo del workflow y envia notificacion al chat de Telegram con detalles del error.",
+        "width": 380
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        1616
+      ],
+      "id": "415d003f-5d25-408b-b7c0-6a7a6223c5b3",
+      "name": "Nota: Error Handling"
+    },
+    {
+      "parameters": {
+        "content": "## Resumen del Workflow\n**invoices 4.0** - Automatizacion de registro de gastos personales.\n\n3 Triggers: Drive (facturas), Gmail (bancos), Telegram (manual)\n+ OCR + IA (GPT-4o) + Conversion USD/COP + Google Sheets + Alertas Telegram",
+        "height": 220,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1136,
+        688
+      ],
+      "id": "c830b55d-d687-4afd-beba-5325358dce6f",
+      "name": "Nota: Resumen General"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6a52c897-d27b-4b3d-8ddf-f77ec43ebc76",
+              "leftValue": "={{ $('Descargar Archivo').isExecuted }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2496,
+        1264
+      ],
+      "id": "8a0b0706-29ca-43f8-8e76-1a6d433fa1e2",
+      "name": "Determinar origen"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Vigilar Carpeta Drive": {
+      "main": [
+        [
+          {
+            "node": "Descargar Archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar Archivo": {
+      "main": [
+        [
+          {
+            "node": "Extraer Base64 del Archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clasificar Tipo Archivo": {
+      "main": [
+        [
+          {
+            "node": "OCR Google Vision - PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OCR Google Vision - Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Base64 del Archivo": {
+      "main": [
+        [
+          {
+            "node": "Clasificar Tipo Archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o Facturas": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extraer Datos Factura (IA)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Datos Factura (IA)": {
+      "main": [
+        [
+          {
+            "node": "Preparar Datos Factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Determinar origen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mover a Carpeta Procesados": {
+      "main": [
+        [
+          {
+            "node": "Renombrar Archivo Procesado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OCR Google Vision - PDF": {
+      "main": [
+        [
+          {
+            "node": "Agregar Texto OCR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agregar Texto OCR": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos Factura": {
+      "main": [
+        [
+          {
+            "node": "Extraer Datos Factura (IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos Factura": {
+      "main": [
+        [
+          {
+            "node": "Obtener Tasa USD (Factura)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recibir Email Bancario": {
+      "main": [
+        [
+          {
+            "node": "Extraer Datos Email (IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o Emails": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extraer Datos Email (IA)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Datos Email (IA)": {
+      "main": [
+        [
+          {
+            "node": "Clasificar Tipo Transaccion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos Email": {
+      "main": [
+        [
+          {
+            "node": "Obtener Tasa USD (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recibir Gasto por Telegram": {
+      "main": [
+        [
+          {
+            "node": "Extraer Datos Telegram (IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o Telegram": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extraer Datos Telegram (IA)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Datos Telegram (IA)": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos Telegram": {
+      "main": [
+        [
+          {
+            "node": "Obtener Tasa USD (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clasificar Tipo Transaccion": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mapear Campos Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Transferencia Recibida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pedir Contexto QR al Usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedir Contexto QR al Usuario": {
+      "main": [
+        [
+          {
+            "node": "Extraer Datos QR (IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Campos QR": {
+      "main": [
+        [
+          {
+            "node": "Obtener Tasa USD (QR)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capturar Error del Workflow": {
+      "main": [
+        [
+          {
+            "node": "Notificar Error por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OCR Google Vision - Imagen": {
+      "main": [
+        [
+          {
+            "node": "Extraer Texto de Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Texto de Imagen": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos Factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertir USD a COP (Email)": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertir USD a COP (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertir USD a COP (QR)": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Tasa USD (Email)": {
+      "main": [
+        [
+          {
+            "node": "Convertir USD a COP (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Tasa USD (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "Convertir USD a COP (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Tasa USD (QR)": {
+      "main": [
+        [
+          {
+            "node": "Convertir USD a COP (QR)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construir Mensaje Notificacion": {
+      "main": [
+        [
+          {
+            "node": "Enviar Alerta Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Tasa USD (Factura)": {
+      "main": [
+        [
+          {
+            "node": "Convertir USD a COP (Factura)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertir USD a COP (Factura)": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Datos QR (IA)": {
+      "main": [
+        [
+          {
+            "node": "Mapear Campos QR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o QR": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extraer Datos QR (IA)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determinar origen": {
+      "main": [
+        [
+          {
+            "node": "Mover a Carpeta Procesados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Construir Mensaje Notificacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "00000000-0000-0000-0000-000000000000",
+  "meta": {
+    "instanceId": "TU_N8N_INSTANCE_ID"
+  },
+  "id": "TU_WORKFLOW_ID",
+  "tags": []
+}
